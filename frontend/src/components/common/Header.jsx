@@ -58,13 +58,25 @@ function Header() {
           
           {/* Left: Brand Logo Image & Delivery Location Selector */}
           <div className="flex items-center gap-2 sm:gap-6 shrink-0">
-            {/* WebsiteLogo Image Asset */}
+            {/* Brand Logo: WebsiteLogo image on mobile/tablet, text form on desktop */}
             <Link to="/" className="flex items-center group shrink-0">
+              {/* Mobile & Tablet Logo Image (Visible < lg) */}
               <img
                 src={websiteLogo}
                 alt="BlinkitMart"
-                className="h-8 sm:h-11 w-auto object-contain transition-transform group-hover:scale-105"
+                className="h-8 sm:h-10 w-auto object-contain transition-transform group-hover:scale-105 lg:hidden"
               />
+
+              {/* Desktop Text Logo (Visible >= lg) */}
+              <div className="hidden lg:flex flex-col leading-none">
+                <span className="text-2xl sm:text-3xl font-black tracking-tight">
+                  <span className="text-[#F8CB46]">blinkit</span>
+                  <span className="text-[#53B128]">mart</span>
+                </span>
+                <span className="text-[10px] font-bold tracking-widest uppercase text-yellow-700 bg-yellow-100 px-1.5 py-0.5 rounded-xs mt-0.5 w-fit">
+                  10 minutes
+                </span>
+              </div>
             </Link>
 
             {/* Delivery Location Selector Button (Blinkit Style) */}
