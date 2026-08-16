@@ -241,7 +241,7 @@ const seedDatabase = async () => {
       password: 'Admin@123',
       role: 'admin',
       phone: '+91 9999988888',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+      avatar: 'https://res.cloudinary.com/doyvz7zrp/image/upload/v1786890614/Gemini_Generated_Image_opzy6oopzy6oopzy_-_Copy_h161an.png',
       isEmailVerified: true,
     });
 
