@@ -1,0 +1,28 @@
+{
+  "name": "blinkit-clone-full-stack-ecommerce",
+  "version": "1.0.0",
+  "description": "Full-Stack Quick-Commerce Grocery Web Application inspired by Blinkit",
+  "main": "backend/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node backend/server.js",
+    "seed": "node backend/seed/seedProducts.js",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "keywords": [
+    "mern",
+    "react",
+    "node",
+    "express",
+    "mongodb",
+    "tailwind",
+    "razorpay",
+    "quick-commerce",
+    "grocery-app",
+    "blinkit-clone"
+  ],
+  "author": "Antigravity Senior Full Stack Developer",
+  "license": "MIT"
+}
