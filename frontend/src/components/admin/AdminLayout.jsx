@@ -214,7 +214,7 @@ function AdminLayout({ children }) {
           {/* User Info Right Badge */}
           <div className="flex items-center gap-3 shrink-0">
             <img
-              src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
+              src={user?.avatar || 'https://res.cloudinary.com/doyvz7zrp/image/upload/v1786890614/Gemini_Generated_Image_opzy6oopzy6oopzy_-_Copy_h161an.png'}
               alt={user?.name}
               className="w-8 h-8 rounded-full object-cover border border-amber-300 shrink-0"
             />
