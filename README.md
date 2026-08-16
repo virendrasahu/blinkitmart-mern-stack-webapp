@@ -634,20 +634,6 @@ For quick evaluation during hiring/code review:
 
 ---
 
-## 💼 Interview Explanation & Resume Guide
-
-### 🗣️ How to Describe this Project in an Interview
-> *"I designed and developed **BlinkitMart**, a production-ready Quick Commerce grocery delivery platform built on the MERN stack. The project features high-accuracy location detection using the browser Geolocation API with Leaflet OpenStreetMap integration, direct image file uploads to Cloudinary via Multer memory storage, 5-minute email OTP password resets using Nodemailer, Razorpay payment gateway integration, and server-side Mongoose pagination across catalog and administrative dashboards."*
-
-### 📝 Resume Bullet Points
-- Built a full-stack MERN quick commerce application serving instant 10-minute grocery ordering with interactive Leaflet map geolocation.
-- Integrated Cloudinary CDN media pipeline using Multer memory storage buffers for product and user avatar image uploads.
-- Architected 5-minute Gmail SMTP OTP password reset verification flow using Nodemailer and time-sensitive Mongoose timestamps.
-- Implemented secure online checkout with Razorpay SDK HMAC signature verification alongside Cash on Delivery support.
-- Built comprehensive Admin Control Suite with RBAC, revenue metrics analytics, product catalog management, and customer account moderation.
-
----
-
 ## 📄 Educational Disclaimer
 
 This project (**BlinkitMart**) is an educational clone developed for software engineering learning, technical assignment evaluation, and portfolio demonstration purposes. All product trademarks, logos, and brand names belong to their respective owners (Blinkit / Grofers).
