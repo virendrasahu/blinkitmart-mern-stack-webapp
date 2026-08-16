@@ -593,8 +593,8 @@ For quick evaluation during hiring/code review:
   - **Password**: `Password123`
 
 - 👑 **Admin Demo Account**:
-  - **Email**: `admin@example.com`
-  - **Password**: `Admin@123`
+  - **Email**: ``
+  - **Password**: ``
 
 ---
 
