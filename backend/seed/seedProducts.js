@@ -222,7 +222,7 @@ const seedDatabase = async () => {
     // 2. Insert Department Categories
     console.log('🌱 Inserting 12 Quick Commerce Categories...');
     const insertedCategories = await Category.insertMany(categoriesData);
-    
+
     const categoryMap = {};
     insertedCategories.forEach((cat) => {
       categoryMap[cat.name] = cat._id;

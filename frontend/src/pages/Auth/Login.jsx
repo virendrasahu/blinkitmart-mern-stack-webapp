@@ -26,16 +26,6 @@ function Login() {
     }
   };
 
-  const handleAutofillDemo = (role) => {
-    if (role === 'admin') {
-      setEmail('admin@example.com');
-      setPassword('Admin@123');
-    } else {
-      setEmail('john@example.com');
-      setPassword('Password123');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-md w-full space-y-6 bg-white p-8 rounded-3xl shadow-sm border border-gray-100 relative">
@@ -48,31 +38,6 @@ function Login() {
           </Link>
           <h2 className="mt-4 text-xl font-black text-gray-900 tracking-tight">Welcome Back</h2>
           <p className="mt-1 text-xs text-gray-500 font-medium">Log in to your account to order daily groceries in minutes</p>
-        </div>
-
-        {/* 1-Click Demo Accounts Banner */}
-        <div className="bg-green-50 border border-green-200 p-3 rounded-2xl space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-green-800 uppercase tracking-wider">
-              ⚡ 1-Click Hiring Demo Accounts
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => handleAutofillDemo('customer')}
-              className="flex-1 py-1.5 px-3 bg-white text-green-700 border border-green-300 rounded-xl text-xs font-bold shadow-2xs hover:bg-green-100 transition-colors"
-            >
-              👤 Customer Demo
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAutofillDemo('admin')}
-              className="flex-1 py-1.5 px-3 bg-amber-500 text-white rounded-xl text-xs font-bold shadow-2xs hover:bg-amber-600 transition-colors"
-            >
-              👑 Admin Demo
-            </button>
-          </div>
         </div>
 
         {/* Login Form */}

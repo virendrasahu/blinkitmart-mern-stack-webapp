@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
+import websiteLogo from '../../assets/WebsiteLogo.png';
 import {
   FiSearch,
   FiShoppingCart,
@@ -14,16 +15,23 @@ import {
   FiShield,
   FiX,
   FiHeart,
+  FiMenu,
+  FiHome,
+  FiGrid,
 } from 'react-icons/fi';
 
 /**
- * Header Component - Sticky Top Navigation Bar with BlinkitMart Logo & Location Selector
+ * Header Component - Responsive Top Navigation Bar with WebsiteLogo image,
+ * Location Selector, Search Bar, Desktop Menu, & Mobile/Tablet Hamburger Drawer.
  */
 function Header() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { location, searchQuery, setSearchQuery, setIsCartOpen, setIsLocationModalOpen } = useApp();
   const { cartCount, summary } = useCart();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const navigate = useNavigate();
 
   const handleSearchSubmit = (e) => {
@@ -37,60 +45,62 @@ function Header() {
     setSearchQuery('');
   };
 
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-gray-100 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white border-b border-gray-100 shadow-xs font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4">
+        
+        {/* Main Desktop & Tablet Top Bar */}
+        <div className="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-4">
           
-          {/* Logo & Delivery Location Selector */}
-          <div className="flex items-center gap-6 shrink-0">
-            {/* BlinkitMart Brand Logo without Lightning Icon */}
-            <Link to="/" className="flex items-center group">
-              <div className="flex flex-col leading-none">
-                <span className="text-2xl sm:text-3xl font-black tracking-tight">
-                  <span className="text-[#F8CB46]">blinkit</span>
-                  <span className="text-[#53B128]">mart</span>
-                </span>
-                <span className="text-[10px] font-bold tracking-widest uppercase text-yellow-700 bg-yellow-100 px-1.5 py-0.5 rounded-xs mt-0.5 w-fit">
-                  10 minutes
-                </span>
-              </div>
+          {/* Left: Brand Logo Image & Delivery Location Selector */}
+          <div className="flex items-center gap-2 sm:gap-6 shrink-0">
+            {/* WebsiteLogo Image Asset */}
+            <Link to="/" className="flex items-center group shrink-0">
+              <img
+                src={websiteLogo}
+                alt="BlinkitMart"
+                className="h-8 sm:h-11 w-auto object-contain transition-transform group-hover:scale-105"
+              />
             </Link>
 
             {/* Delivery Location Selector Button (Blinkit Style) */}
             <div
               onClick={() => setIsLocationModalOpen(true)}
-              className="hidden md:flex flex-col border-l border-gray-200 pl-6 cursor-pointer group hover:opacity-90 transition-opacity"
+              className="flex flex-col cursor-pointer group hover:opacity-90 transition-opacity border-l border-gray-200 pl-2 sm:pl-4"
             >
-              <div className="flex items-center gap-1 text-xs font-black uppercase text-gray-900 tracking-wider">
-                <span className="text-[#53B128] font-bold">Delivery in 10 mins</span>
-                <FiChevronDown className="w-3.5 h-3.5 text-gray-500 group-hover:translate-y-0.5 transition-transform" />
+              <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-black uppercase text-gray-900 tracking-wider leading-tight">
+                <span className="text-[#53B128] font-bold truncate max-w-[90px] sm:max-w-none">Delivery 10m</span>
+                <FiChevronDown className="w-3 h-3 text-gray-500 group-hover:translate-y-0.5 transition-transform shrink-0" />
               </div>
-              <div className="flex items-center gap-1 text-xs text-gray-500 font-medium truncate max-w-[220px]">
-                <FiMapPin className="w-3.5 h-3.5 text-[#53B128] shrink-0" />
+              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-500 font-medium truncate max-w-[120px] sm:max-w-[200px]">
+                <FiMapPin className="w-3 h-3 text-[#53B128] shrink-0" />
                 <span className="truncate">{location}</span>
               </div>
             </div>
           </div>
 
-          {/* Real-Time Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="flex-1 max-w-2xl mx-2">
-            <div className="relative">
+          {/* Center: Search Bar (Hidden on ultra-small mobile, displayed in sub-header or desktop) */}
+          <form onSubmit={handleSearchSubmit} className="hidden sm:flex flex-1 max-w-xl mx-2">
+            <div className="relative w-full">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                <FiSearch className="h-5 w-5" />
+                <FiSearch className="h-4.5 w-4.5" />
               </div>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder='Search "milk", "bread", "chips", "apples"...'
-                className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-xs"
+                className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-xs"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={clearSearch}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                 >
                   <FiX className="h-4 w-4" />
                 </button>
@@ -98,103 +108,105 @@ function Header() {
             </div>
           </form>
 
-          {/* Right Action Buttons (User Profile & Cart) */}
-          <div className="flex items-center gap-4 shrink-0">
+          {/* Right Action Controls: Desktop Profile/Cart + Mobile Cart & Hamburger */}
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             
-            {/* User Profile / Auth Menu */}
-            {isAuthenticated ? (
-              <div className="relative">
-                <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-800 cursor-pointer"
-                >
-                  <img
-                    src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                    alt={user?.name}
-                    className="w-7 h-7 rounded-full object-cover border border-primary/20"
-                  />
-                  <span className="hidden lg:inline max-w-[100px] truncate">{user?.name?.split(' ')[0]}</span>
-                  <FiChevronDown className="w-4 h-4 text-gray-500" />
-                </button>
-
-                {/* Dropdown Menu */}
-                {dropdownOpen && (
-                  <div
-                    className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2"
-                    onMouseLeave={() => setDropdownOpen(false)}
+            {/* Desktop User Profile / Auth Dropdown (Visible >= lg screens) */}
+            <div className="hidden lg:block">
+              {isAuthenticated ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-800 cursor-pointer"
                   >
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-bold text-gray-900">{user?.name}</p>
-                      <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                      <span className="inline-block text-[10px] font-bold text-primary bg-primary-light px-2 py-0.5 rounded-full mt-1 uppercase">
-                        {user?.role}
-                      </span>
-                    </div>
+                    <img
+                      src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
+                      alt={user?.name}
+                      className="w-7 h-7 rounded-full object-cover border border-primary/20 shrink-0"
+                    />
+                    <span className="max-w-[100px] truncate">{user?.name?.split(' ')[0]}</span>
+                    <FiChevronDown className="w-4 h-4 text-gray-500" />
+                  </button>
 
-                    <Link
-                      to="/orders"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  {/* Desktop Profile Dropdown */}
+                  {dropdownOpen && (
+                    <div
+                      className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2"
+                      onMouseLeave={() => setDropdownOpen(false)}
                     >
-                      <FiPackage className="w-4 h-4 text-primary" /> My Orders
-                    </Link>
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-bold text-gray-900 truncate">{user?.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                        <span className="inline-block text-[10px] font-bold text-primary bg-primary-light px-2 py-0.5 rounded-full mt-1 uppercase">
+                          {user?.role}
+                        </span>
+                      </div>
 
-                    <Link
-                      to="/wishlist"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      <FiHeart className="w-4 h-4 text-red-500" /> Wishlist
-                    </Link>
-
-                    <Link
-                      to="/profile"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      <FiUser className="w-4 h-4 text-primary" /> Profile Settings
-                    </Link>
-
-                    {isAdmin && (
                       <Link
-                        to="/admin"
+                        to="/orders"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-50 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        <FiShield className="w-4 h-4 text-amber-600" /> Admin Dashboard
+                        <FiPackage className="w-4 h-4 text-primary" /> My Orders
                       </Link>
-                    )}
 
-                    <div className="border-t border-gray-100 my-1"></div>
+                      <Link
+                        to="/wishlist"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <FiHeart className="w-4 h-4 text-red-500" /> Wishlist
+                      </Link>
 
-                    <button
-                      onClick={() => {
-                        setDropdownOpen(false);
-                        logout();
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                    >
-                      <FiLogOut className="w-4 h-4" /> Log Out
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-800 hover:bg-gray-50 transition-all flex items-center gap-2"
-              >
-                <FiUser className="w-4 h-4 text-gray-600" /> Log In
-              </Link>
-            )}
+                      <Link
+                        to="/profile"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <FiUser className="w-4 h-4 text-primary" /> Profile Settings
+                      </Link>
+
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-50 transition-colors"
+                        >
+                          <FiShield className="w-4 h-4 text-amber-600" /> Admin Dashboard
+                        </Link>
+                      )}
+
+                      <div className="border-t border-gray-100 my-1"></div>
+
+                      <button
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          logout();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        <FiLogOut className="w-4 h-4" /> Log Out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-800 hover:bg-gray-50 transition-all flex items-center gap-2"
+                >
+                  <FiUser className="w-4 h-4 text-gray-600" /> Log In
+                </Link>
+              )}
+            </div>
 
             {/* Cart Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="flex items-center gap-3 px-4 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl shadow-sm transition-all cursor-pointer font-bold text-sm"
+              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl shadow-sm transition-all cursor-pointer font-bold text-xs sm:text-sm shrink-0"
             >
               <div className="relative">
-                <FiShoppingCart className="w-5 h-5" />
+                <FiShoppingCart className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
                 <span className="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
                   {cartCount}
                 </span>
@@ -205,9 +217,195 @@ function Header() {
               </div>
             </button>
 
+            {/* Mobile/Tablet Hamburger Menu Button (< lg screens) */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-2 text-gray-700 hover:text-black hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+              title="Open Navigation Menu"
+              aria-label="Open Navigation Menu"
+            >
+              <FiMenu className="w-6 h-6" />
+            </button>
+
           </div>
         </div>
+
+        {/* Mobile Sub-Header Search Bar (Visible ONLY on small mobile screens < sm) */}
+        <div className="pb-3 sm:hidden">
+          <form onSubmit={handleSearchSubmit}>
+            <div className="relative w-full">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <FiSearch className="h-4 w-4" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder='Search "milk", "chips", "apples"...'
+                className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                >
+                  <FiX className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+
       </div>
+
+      {/* MOBILE / TABLET SLIDE-OUT NAVIGATION DRAWER (< lg screens) */}
+      {mobileMenuOpen && (
+        <>
+          {/* Dark Backdrop Overlay */}
+          <div
+            onClick={closeMobileMenu}
+            className="fixed inset-0 bg-black/60 z-40 backdrop-blur-xs lg:hidden animate-in fade-in"
+          />
+
+          {/* Slide-In Navigation Drawer */}
+          <aside className="fixed inset-y-0 right-0 w-72 bg-white text-gray-900 z-50 flex flex-col justify-between shadow-2xl lg:hidden animate-in slide-in-from-right">
+            <div>
+              {/* Drawer Top Header */}
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
+                <div className="flex items-center gap-2">
+                  <img src={websiteLogo} alt="BlinkitMart" className="h-8 w-auto object-contain" />
+                </div>
+                <button
+                  onClick={closeMobileMenu}
+                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 rounded-xl transition-colors cursor-pointer"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* User Account Quick Info Card inside Drawer */}
+              <div className="p-4 bg-green-50/40 border-b border-green-100/60">
+                {isAuthenticated ? (
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
+                      alt={user?.name}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-primary/30"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-gray-900 truncate">{user?.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center space-y-2">
+                    <p className="text-xs font-bold text-gray-800">Welcome to BlinkitMart! 🛒</p>
+                    <Link
+                      to="/login"
+                      onClick={closeMobileMenu}
+                      className="block w-full py-2 px-4 bg-primary text-white text-xs font-bold rounded-xl text-center shadow-2xs hover:bg-primary-dark transition-all"
+                    >
+                      Log In / Sign Up
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation Menu Links */}
+              <nav className="p-3 space-y-1">
+                <Link
+                  to="/"
+                  onClick={closeMobileMenu}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                >
+                  <FiHome className="w-4 h-4 text-primary" /> Home
+                </Link>
+
+                <Link
+                  to="/products"
+                  onClick={closeMobileMenu}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                >
+                  <FiGrid className="w-4 h-4 text-primary" /> All Categories & Products
+                </Link>
+
+                <Link
+                  to="/wishlist"
+                  onClick={closeMobileMenu}
+                  className="flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <FiHeart className="w-4 h-4 text-red-500" /> Wishlist
+                  </div>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMobileMenu();
+                    setIsCartOpen(true);
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <FiShoppingCart className="w-4 h-4 text-primary" /> My Cart
+                  </div>
+                  <span className="bg-yellow-400 text-gray-900 text-[10px] font-black px-2 py-0.5 rounded-full">
+                    {cartCount} items
+                  </span>
+                </button>
+
+                {isAuthenticated && (
+                  <>
+                    <Link
+                      to="/orders"
+                      onClick={closeMobileMenu}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                    >
+                      <FiPackage className="w-4 h-4 text-primary" /> My Orders
+                    </Link>
+
+                    <Link
+                      to="/profile"
+                      onClick={closeMobileMenu}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                    >
+                      <FiUser className="w-4 h-4 text-primary" /> Profile Settings
+                    </Link>
+                  </>
+                )}
+
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    onClick={closeMobileMenu}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors"
+                  >
+                    <FiShield className="w-4 h-4 text-amber-600" /> Admin Dashboard
+                  </Link>
+                )}
+              </nav>
+            </div>
+
+            {/* Drawer Bottom Actions */}
+            {isAuthenticated && (
+              <div className="p-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMobileMenu();
+                    logout();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
+                >
+                  <FiLogOut className="w-4 h-4" /> Log Out
+                </button>
+              </div>
+            )}
+          </aside>
+        </>
+      )}
     </header>
   );
 }
