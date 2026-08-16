@@ -8,17 +8,26 @@ const AppContext = createContext();
 /**
  * AppProvider Component
  * 
- * What it does:
- * - Manages delivery location, location selection modal state, saved addresses, search queries, and drawers.
+ * Manages active delivery location, location selection modal state,
+ * saved addresses, search queries, cart drawer, and persistent storage.
  */
 export const AppProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
 
-  // Active delivery location display string
-  const [location, setLocation] = useState('Gurugram, Haryana - 122001');
+  // Active delivery location display string with localStorage persistence
+  const [location, setLocation] = useState(() => {
+    return localStorage.getItem('blinkit_location') || 'Gurugram, Haryana - 122001';
+  });
 
-  // Active selected address object (lat, lng, fullAddress, etc.)
-  const [activeAddress, setActiveAddress] = useState(null);
+  // Active selected address object with localStorage persistence
+  const [activeAddress, setActiveAddressState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('blinkit_active_address');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   // Saved user addresses list
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -49,8 +58,7 @@ export const AppProvider = ({ children }) => {
         // Auto-select default address if activeAddress is not set
         const defaultAddr = res.data.find((a) => a.isDefault) || res.data[0];
         if (defaultAddr && !activeAddress) {
-          setActiveAddress(defaultAddr);
-          setLocation(`${defaultAddr.area || defaultAddr.city}, ${defaultAddr.state} - ${defaultAddr.pincode}`);
+          selectAddress(defaultAddr);
         }
       }
     } catch (err) {
@@ -62,14 +70,21 @@ export const AppProvider = ({ children }) => {
     fetchAddresses();
   }, [isAuthenticated]);
 
-  // Set selected address as active delivery location
+  // Set selected address as active delivery location and persist to localStorage
   const selectAddress = (addr) => {
-    setActiveAddress(addr);
+    setActiveAddressState(addr);
+
     if (typeof addr === 'string') {
       setLocation(addr);
+      localStorage.setItem('blinkit_location', addr);
     } else if (addr) {
-      const formatted = addr.fullAddress || `${addr.area || addr.street || addr.city}, ${addr.state} - ${addr.pincode}`;
+      const formatted =
+        addr.fullAddress ||
+        `${addr.houseNo ? addr.houseNo + ', ' : ''}${addr.street || addr.area || addr.city}, ${addr.city ? addr.city + ', ' : ''}${addr.state}${addr.pincode ? ' - ' + addr.pincode : ''}`;
+      
       setLocation(formatted);
+      localStorage.setItem('blinkit_location', formatted);
+      localStorage.setItem('blinkit_active_address', JSON.stringify(addr));
     }
   };
 

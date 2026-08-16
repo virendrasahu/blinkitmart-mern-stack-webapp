@@ -7,6 +7,7 @@ import {
   useMap,
 } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 import {
   FiX,
@@ -19,13 +20,14 @@ import {
   FiTrash2,
   FiPlus,
   FiAlertTriangle,
+  FiEdit3,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { useApp } from '../../context/AppContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import addressService from '../../services/addressService.js';
 
-// Fix Leaflet Default Icon Paths in Vite/Webpack Bundles
+// Fix Leaflet Default Icon Paths in Vite Bundles
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -53,14 +55,17 @@ function ChangeMapView({ center }) {
 /**
  * Helper Component: Re-calculates Map Dimensions to Prevent Blank/Grey Tiles
  */
-function ResizeMap() {
+function ResizeMap({ activeTab }) {
   const map = useMap();
   useEffect(() => {
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [map]);
+    map.invalidateSize();
+    const timers = [
+      setTimeout(() => map.invalidateSize(), 50),
+      setTimeout(() => map.invalidateSize(), 200),
+      setTimeout(() => map.invalidateSize(), 500),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [map, activeTab]);
   return null;
 }
 
@@ -78,6 +83,11 @@ function MapEventsHandler({ onLocationSelect }) {
 
 /**
  * Blinkit-Style Location Selection & Address Management Modal
+ * 
+ * Features:
+ * - 📍 Map Location Picker (Leaflet + Nominatim Geocoding + GPS API)
+ * - 📝 Enter Address Manually (Direct Form with robust validation)
+ * - 🏠 Saved Addresses (Logged-in User Saved List)
  */
 function LocationModal() {
   const {
@@ -90,7 +100,7 @@ function LocationModal() {
 
   const { isAuthenticated, user } = useAuth();
 
-  // Active Tab: 'map' or 'saved'
+  // Active Tab: 'map' | 'manual' | 'saved'
   const [activeTab, setActiveTab] = useState('map');
 
   // Search input state
@@ -105,7 +115,6 @@ function LocationModal() {
   const [gpsError, setGpsError] = useState('');
 
   // Address Form State
-  const [editingAddressId, setEditingAddressId] = useState(null);
   const [formData, setFormData] = useState({
     fullName: user?.name || '',
     phone: user?.phone || '',
@@ -117,14 +126,13 @@ function LocationModal() {
     pincode: '',
     landmark: '',
     addressType: 'home',
-    isDefault: false,
     fullAddress: '',
   });
 
   const [submitting, setSubmitting] = useState(false);
   const markerRef = useRef(null);
 
-  // Auto-fill recipient details when user changes
+  // Auto-fill recipient details when user loads
   useEffect(() => {
     if (user) {
       setFormData((prev) => ({
@@ -159,17 +167,17 @@ function LocationModal() {
 
         setFormData((prev) => ({
           ...prev,
-          houseNo: house || prev.houseNo || '',
-          street: street || prev.street || '',
+          houseNo: house || prev.houseNo || 'Block 1',
+          street: street || prev.street || 'Main Road',
           area: area || prev.area || city,
-          city: city || prev.city || '',
-          state: state || prev.state || '',
+          city: city || prev.city || 'City',
+          state: state || prev.state || 'State',
           pincode: pincode || prev.pincode || '',
           fullAddress: displayName,
         }));
       }
     } catch (err) {
-      console.warn('Reverse geocoding error:', err.message);
+      console.warn('Reverse geocoding note:', err.message);
     } finally {
       setIsGeocoding(false);
     }
@@ -199,7 +207,7 @@ function LocationModal() {
   const handleDetectLocation = () => {
     setGpsError('');
     if (!navigator.geolocation) {
-      const msg = 'Browser Geolocation API is not supported by your browser.';
+      const msg = 'Browser Geolocation API is not supported by your browser. Switch to Manual Address below.';
       setGpsError(msg);
       toast.error(msg);
       return;
@@ -209,7 +217,7 @@ function LocationModal() {
 
     const geoOptions = {
       enableHighAccuracy: true,
-      timeout: 15000,
+      timeout: 10000,
       maximumAge: 0,
     };
 
@@ -230,20 +238,20 @@ function LocationModal() {
         let errMsg = '';
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errMsg = 'Location permission denied by browser. Please select location manually on the map.';
+            errMsg = 'GPS location permission denied. You can drag the map marker or switch to Manual Address Entry.';
             break;
           case error.POSITION_UNAVAILABLE:
-            errMsg = 'GPS signal unavailable. Please select location manually on the map.';
+            errMsg = 'GPS signal unavailable. You can drag the map marker or switch to Manual Address Entry.';
             break;
           case error.TIMEOUT:
-            errMsg = 'GPS location request timed out. Please select location manually on the map.';
+            errMsg = 'GPS request timed out. You can select location on the map or switch to Manual Address Entry.';
             break;
           default:
-            errMsg = 'Location detection failed. Please select location manually on the map.';
+            errMsg = 'Location detection failed. You can select location on the map or switch to Manual Address Entry.';
             break;
         }
         setGpsError(errMsg);
-        toast.error(errMsg);
+        toast.info(errMsg);
       },
       geoOptions
     );
@@ -285,65 +293,131 @@ function LocationModal() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   /**
-   * Save Address to MongoDB (or set temporary location for guests)
+   * 📍 Flow 1: Submit Map Location Selection
    */
-  const handleSubmitAddress = async (e) => {
-    e.preventDefault();
+  const handleConfirmMapLocation = async () => {
+    const displayAddr =
+      formData.fullAddress ||
+      `${formData.houseNo || ''} ${formData.street || 'Selected Locality'}, ${formData.city || ''} ${formData.state || ''}`;
 
-    if (!formData.fullName || !formData.phone || !formData.houseNo || !formData.street || !formData.area) {
-      toast.error('Please fill in all required address fields!');
-      return;
-    }
+    const cleanArea = formData.area.trim() || formData.street.trim() || formData.city.trim() || 'Selected Area';
+
+    const payload = {
+      fullName: formData.fullName.trim() || user?.name || 'Customer',
+      phone: formData.phone.trim() || user?.phone || '9876543210',
+      houseNo: formData.houseNo.trim() || 'Map Location',
+      street: formData.street.trim() || 'Selected Locality',
+      area: cleanArea,
+      city: formData.city.trim() || 'City',
+      state: formData.state.trim() || 'State',
+      pincode: formData.pincode.trim() || '122001',
+      landmark: formData.landmark.trim() || '',
+      latitude: position[0],
+      longitude: position[1],
+      fullAddress: displayAddr,
+      addressType: formData.addressType || 'home',
+    };
 
     setSubmitting(true);
     try {
-      const payload = {
-        ...formData,
-        latitude: position[0],
-        longitude: position[1],
-        fullAddress: formData.fullAddress || `${formData.houseNo}, ${formData.street}, ${formData.area}, ${formData.city}, ${formData.state} - ${formData.pincode}`,
-      };
-
-      if (!isAuthenticated) {
-        setActiveAddress(payload);
-        toast.success('Delivery location set! Log in to save addresses permanently.');
-        setIsLocationModalOpen(false);
-        setSubmitting(false);
-        return;
-      }
-
-      if (editingAddressId) {
-        const res = await addressService.updateAddress(editingAddressId, payload);
-        if (res.success) {
-          toast.success('Address updated successfully!');
-          await fetchAddresses();
-          setActiveAddress(res.data);
-          setIsLocationModalOpen(false);
+      if (isAuthenticated) {
+        try {
+          const res = await addressService.addAddress(payload);
+          if (res.success && res.data) {
+            await fetchAddresses();
+            setActiveAddress(res.data);
+          } else {
+            setActiveAddress(payload);
+          }
+        } catch (err) {
+          setActiveAddress(payload);
         }
       } else {
-        const res = await addressService.addAddress(payload);
-        if (res.success) {
-          toast.success('New delivery address saved!');
-          await fetchAddresses();
-          setActiveAddress(res.data);
-          setIsLocationModalOpen(false);
-        }
+        setActiveAddress(payload);
       }
-    } catch (err) {
-      toast.error(err.message || 'Failed to save address');
+
+      toast.success('Map location confirmed & set as delivery address!');
+      setIsLocationModalOpen(false);
     } finally {
       setSubmitting(false);
     }
   };
 
+  /**
+   * 📝 Flow 2: Submit Manual Address Form
+   */
+  const handleManualSubmit = async (e) => {
+    e.preventDefault();
+
+    // Check visible required fields
+    if (
+      !formData.fullName.trim() ||
+      !formData.phone.trim() ||
+      !formData.houseNo.trim() ||
+      !formData.street.trim() ||
+      !formData.city.trim() ||
+      !formData.state.trim() ||
+      !formData.pincode.trim()
+    ) {
+      toast.error('Please fill in all required address fields (Name, Phone, Flat/House No, Street, City, State, Pincode)!');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const cleanArea = formData.area.trim() || formData.street.trim() || formData.city.trim();
+      const formattedFullAddress = `${formData.houseNo.trim()}, ${formData.street.trim()}, ${cleanArea}, ${formData.city.trim()}, ${formData.state.trim()} - ${formData.pincode.trim()}`;
+
+      const payload = {
+        fullName: formData.fullName.trim(),
+        phone: formData.phone.trim(),
+        houseNo: formData.houseNo.trim(),
+        street: formData.street.trim(),
+        area: cleanArea,
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        pincode: formData.pincode.trim(),
+        landmark: formData.landmark.trim(),
+        addressType: formData.addressType || 'home',
+        latitude: position[0] || 28.4595,
+        longitude: position[1] || 77.0266,
+        fullAddress: formattedFullAddress,
+      };
+
+      if (isAuthenticated) {
+        const res = await addressService.addAddress(payload);
+        if (res.success && res.data) {
+          toast.success('Delivery address saved successfully!');
+          await fetchAddresses();
+          setActiveAddress(res.data);
+        } else {
+          setActiveAddress(payload);
+          toast.success('Delivery location set!');
+        }
+      } else {
+        setActiveAddress(payload);
+        toast.success('Delivery location set!');
+      }
+
+      setIsLocationModalOpen(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to save address');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /**
+   * 🏠 Flow 3: Select Saved Address
+   */
   const handleSelectSavedAddress = (addr) => {
     setActiveAddress(addr);
     toast.success(`Selected "${addr.addressType.toUpperCase()}" delivery address`);
@@ -367,31 +441,31 @@ function LocationModal() {
   if (!isLocationModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden relative border border-gray-100 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden relative border border-gray-100 flex flex-col max-h-[92vh]">
         
-        {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        {/* Modal Header */}
+        <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/60 shrink-0">
           <div>
-            <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+            <h3 className="text-sm sm:text-base font-black text-gray-900 flex items-center gap-2">
               <FiMapPin className="text-primary" /> Select Delivery Location
             </h3>
-            <p className="text-xs text-gray-500 font-medium">Choose address for 10-minute grocery delivery</p>
+            <p className="text-[11px] sm:text-xs text-gray-500 font-medium">Choose address for 10-minute grocery delivery</p>
           </div>
 
           <button
             onClick={() => setIsLocationModalOpen(false)}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 rounded-full transition-colors cursor-pointer"
           >
             <FiX className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tab Navigation: Map Picker vs Saved Addresses */}
-        <div className="flex border-b border-gray-100 bg-gray-50/30 px-5 pt-3 gap-3">
+        {/* Independent Flow Tabs */}
+        <div className="flex border-b border-gray-200 bg-gray-50/40 px-3 sm:px-5 pt-2.5 gap-1 sm:gap-3 shrink-0 overflow-x-auto">
           <button
             onClick={() => setActiveTab('map')}
-            className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+            className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 shrink-0 cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'map'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-800'
@@ -400,103 +474,56 @@ function LocationModal() {
             📍 Map Location Picker
           </button>
 
+          <button
+            onClick={() => setActiveTab('manual')}
+            className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 shrink-0 cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'manual'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            📝 Enter Address Manually
+          </button>
+
           {isAuthenticated && (
             <button
               onClick={() => setActiveTab('saved')}
-              className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
+              className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 shrink-0 cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'saved'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-gray-500 hover:text-gray-800'
               }`}
             >
-              🏠 Saved Addresses ({savedAddresses.length})
+              🏠 Saved ({savedAddresses.length})
             </button>
           )}
         </div>
 
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        {/* Modal Scrollable Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           
-          {activeTab === 'saved' ? (
-            /* Saved Addresses List */
-            <div className="space-y-3">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Your Saved Delivery Addresses</h4>
-                <button
-                  onClick={() => setActiveTab('map')}
-                  className="text-xs text-primary font-bold hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <FiPlus className="w-3.5 h-3.5" /> Add New Address
-                </button>
-              </div>
-
-              {savedAddresses.length === 0 ? (
-                <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100">
-                  <FiMapPin className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-xs font-bold text-gray-800">No saved addresses found</p>
+          {/* TAB 1: 📍 MAP LOCATION PICKER */}
+          {activeTab === 'map' && (
+            <div className="space-y-3.5">
+              
+              {/* GPS Warning / Failure Banner with Manual Switch Button */}
+              {gpsError && (
+                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <FiAlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                    <span className="font-medium">{gpsError}</span>
+                  </div>
                   <button
-                    onClick={() => setActiveTab('map')}
-                    className="mt-3 px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold"
+                    type="button"
+                    onClick={() => setActiveTab('manual')}
+                    className="px-3 py-1.5 bg-amber-600 text-white font-bold rounded-xl text-[11px] hover:bg-amber-700 transition-colors shrink-0 cursor-pointer"
                   >
-                    Pick Location on Map
+                    📝 Switch to Manual Address
                   </button>
                 </div>
-              ) : (
-                savedAddresses.map((addr) => (
-                  <div
-                    key={addr._id}
-                    onClick={() => handleSelectSavedAddress(addr)}
-                    className="p-4 bg-white hover:bg-green-50/40 rounded-2xl border border-gray-200 hover:border-primary transition-all flex items-start justify-between cursor-pointer group shadow-2xs"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 bg-gray-100 text-gray-700 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-                        {addr.addressType === 'home' && <FiHome className="w-4 h-4" />}
-                        {addr.addressType === 'work' && <FiBriefcase className="w-4 h-4" />}
-                        {addr.addressType === 'other' && <FiMapPin className="w-4 h-4" />}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-black uppercase text-gray-900">{addr.addressType}</span>
-                          {addr.isDefault && (
-                            <span className="bg-green-100 text-green-800 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase">
-                              DEFAULT
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs font-bold text-gray-800 mt-0.5">{addr.fullName} • {addr.phone}</p>
-                        <p className="text-xs text-gray-600 font-medium mt-0.5 leading-snug">
-                          {addr.fullAddress || `${addr.houseNo}, ${addr.street}, ${addr.area}, ${addr.city}, ${addr.state} - ${addr.pincode}`}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={(e) => handleDeleteSavedAddress(addr._id, e)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                        title="Delete Address"
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          ) : (
-            /* Interactive Map Picker & Address Form */
-            <div className="space-y-4">
-              
-              {/* GPS Error Alert */}
-              {gpsError && (
-                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl text-xs flex items-center gap-2">
-                  <FiAlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                  <span>{gpsError}</span>
-                </div>
               )}
 
-              {/* Location Search Bar & Detect Location Button */}
+              {/* Location Search Bar & Detect GPS Button */}
               <div className="flex flex-col sm:flex-row gap-2">
                 <form onSubmit={handleSearchLocation} className="flex-1 relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -545,8 +572,8 @@ function LocationModal() {
                 </div>
               )}
 
-              {/* Leaflet + OpenStreetMap Container */}
-              <div className="w-full h-64 sm:h-72 rounded-2xl overflow-hidden border border-gray-200 shadow-2xs relative z-10">
+              {/* Responsive Leaflet Map Container */}
+              <div className="w-full h-52 sm:h-64 rounded-2xl overflow-hidden border border-gray-200 shadow-2xs relative z-0">
                 <MapContainer
                   center={position}
                   zoom={16}
@@ -557,7 +584,7 @@ function LocationModal() {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
-                  <ResizeMap />
+                  <ResizeMap activeTab={activeTab} />
                   <ChangeMapView center={position} />
                   <MapEventsHandler onLocationSelect={(newPos) => {
                     setPosition(newPos);
@@ -576,13 +603,51 @@ function LocationModal() {
                 </span>
               </div>
 
-              {/* Detailed Address Form */}
-              <form onSubmit={handleSubmitAddress} className="space-y-3 pt-2">
-                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-1">
-                  Complete Address Details
-                </h4>
+              {/* Selected Location Address Card */}
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-2xl space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold text-primary uppercase tracking-wider flex items-center gap-1">
+                    <FiMapPin /> Selected Map Location
+                  </span>
+                  {isGeocoding && <span className="text-[10px] text-gray-400 font-bold animate-pulse">Updating address...</span>}
+                </div>
+                <p className="text-xs font-bold text-gray-900 leading-snug">
+                  {formData.fullAddress || 'Selected location on map'}
+                </p>
+              </div>
 
-                {/* Address Type Pills */}
+              {/* Map CTA Confirm Button */}
+              <button
+                type="button"
+                onClick={handleConfirmMapLocation}
+                disabled={submitting}
+                className="w-full py-3.5 px-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {submitting ? (
+                  <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+                ) : (
+                  <>
+                    <FiCheck className="w-4 h-4" /> Confirm & Set Map Location
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* TAB 2: 📝 ENTER ADDRESS MANUALLY */}
+          {activeTab === 'manual' && (
+            <form onSubmit={handleManualSubmit} className="space-y-3.5">
+              
+              <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <FiEdit3 className="text-primary" /> Direct Address Entry Form
+                </h4>
+                <span className="text-[10px] text-gray-400 font-semibold">* Required fields</span>
+              </div>
+
+              {/* Address Type Pills */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">Save Address As</label>
                 <div className="flex gap-2">
                   {['home', 'work', 'other'].map((type) => (
                     <button
@@ -602,135 +667,221 @@ function LocationModal() {
                     </button>
                   ))}
                 </div>
+              </div>
 
-                {/* Recipient & Phone */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Recipient Name *</label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      required
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                      placeholder="John Doe"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Contact Phone *</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      required
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="+91 9876543210"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                </div>
-
-                {/* House & Street */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Flat / House No. *</label>
-                    <input
-                      type="text"
-                      name="houseNo"
-                      required
-                      value={formData.houseNo}
-                      onChange={handleInputChange}
-                      placeholder="Flat 402, Block B"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Street / Locality *</label>
-                    <input
-                      type="text"
-                      name="street"
-                      required
-                      value={formData.street}
-                      onChange={handleInputChange}
-                      placeholder="Golf Course Road"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                </div>
-
-                {/* City, State, Pincode */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-700 uppercase mb-1">City *</label>
-                    <input
-                      type="text"
-                      name="city"
-                      required
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-700 uppercase mb-1">State *</label>
-                    <input
-                      type="text"
-                      name="state"
-                      required
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Pincode *</label>
-                    <input
-                      type="text"
-                      name="pincode"
-                      required
-                      maxLength={6}
-                      value={formData.pincode}
-                      onChange={handleInputChange}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Landmark */}
+              {/* Recipient Name & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Landmark (Optional)</label>
+                  <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">Recipient Name *</label>
+                  <input
+                    type="text"
+                    name="fullName"
+                    required
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    placeholder="Full Name"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">Contact Phone *</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="+91 9876543210"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* House & Street */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">Flat / House No. *</label>
+                  <input
+                    type="text"
+                    name="houseNo"
+                    required
+                    value={formData.houseNo}
+                    onChange={handleInputChange}
+                    placeholder="House / Flat / Building No."
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">Street / Locality *</label>
+                  <input
+                    type="text"
+                    name="street"
+                    required
+                    value={formData.street}
+                    onChange={handleInputChange}
+                    placeholder="Street / Colony / Locality"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Area & Landmark */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">Area / Sector / Neighborhood</label>
+                  <input
+                    type="text"
+                    name="area"
+                    value={formData.area}
+                    onChange={handleInputChange}
+                    placeholder="Area / Sector (Optional)"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">Landmark (Optional)</label>
                   <input
                     type="text"
                     name="landmark"
                     value={formData.landmark}
                     onChange={handleInputChange}
-                    placeholder="Near Metro Station / Opposite Park"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none"
+                    placeholder="Near Park / Bank / Station"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* City, State, Pincode */}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">City *</label>
+                  <input
+                    type="text"
+                    name="city"
+                    required
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="City"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white font-medium"
                   />
                 </div>
 
-                {/* Submit CTA */}
-                <div className="pt-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">State *</label>
+                  <input
+                    type="text"
+                    name="state"
+                    required
+                    value={formData.state}
+                    onChange={handleInputChange}
+                    placeholder="State"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">Pincode *</label>
+                  <input
+                    type="text"
+                    name="pincode"
+                    required
+                    maxLength={6}
+                    value={formData.pincode}
+                    onChange={handleInputChange}
+                    placeholder="Pincode"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Submit CTA */}
+              <div className="pt-3">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-3.5 px-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+                  ) : (
+                    <>
+                      <FiCheck className="w-4 h-4" /> Save & Set as Delivery Location
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* TAB 3: 🏠 SAVED ADDRESSES */}
+          {activeTab === 'saved' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Your Saved Delivery Addresses</h4>
+                <button
+                  onClick={() => setActiveTab('manual')}
+                  className="text-xs text-primary font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <FiPlus className="w-3.5 h-3.5" /> Enter New Address
+                </button>
+              </div>
+
+              {savedAddresses.length === 0 ? (
+                <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100">
+                  <FiMapPin className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-xs font-bold text-gray-800">No saved addresses found</p>
                   <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-3.5 px-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    onClick={() => setActiveTab('manual')}
+                    className="mt-3 px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold cursor-pointer"
                   >
-                    {submitting ? (
-                      <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-                    ) : (
-                      <>
-                        <FiCheck className="w-4 h-4" /> Save & Set as Delivery Location
-                      </>
-                    )}
+                    Enter Address Manually
                   </button>
                 </div>
-              </form>
+              ) : (
+                savedAddresses.map((addr) => (
+                  <div
+                    key={addr._id}
+                    onClick={() => handleSelectSavedAddress(addr)}
+                    className="p-4 bg-white hover:bg-green-50/40 rounded-2xl border border-gray-200 hover:border-primary transition-all flex items-start justify-between cursor-pointer group shadow-2xs"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-gray-100 text-gray-700 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                        {addr.addressType === 'home' && <FiHome className="w-4 h-4" />}
+                        {addr.addressType === 'work' && <FiBriefcase className="w-4 h-4" />}
+                        {addr.addressType === 'other' && <FiMapPin className="w-4 h-4" />}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black uppercase text-gray-900">{addr.addressType}</span>
+                          {addr.isDefault && (
+                            <span className="bg-green-100 text-green-800 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase">
+                              DEFAULT
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-bold text-gray-800 mt-0.5">{addr.fullName} • {addr.phone}</p>
+                        <p className="text-xs text-gray-600 font-medium mt-0.5 leading-snug">
+                          {addr.fullAddress || `${addr.houseNo}, ${addr.street}, ${addr.area || addr.city}, ${addr.city}, ${addr.state} - ${addr.pincode}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => handleDeleteSavedAddress(addr._id, e)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        title="Delete Address"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
