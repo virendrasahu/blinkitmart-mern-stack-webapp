@@ -238,7 +238,7 @@ const seedDatabase = async () => {
     await User.create({
       name: 'Blinkit Admin',
       email: 'admin@example.com',
-      password: 'Admin@2609',
+      password: 'Admin@123',
       role: 'admin',
       phone: '+91 9999988888',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
