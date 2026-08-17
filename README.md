@@ -148,7 +148,7 @@ Developed as a comprehensive educational and hiring portfolio project demonstrat
 | **Database & ORM** | MongoDB Atlas, Mongoose ORM (`mongoose@8.5.2`) |
 | **Authentication & Hashing**| JSON Web Tokens (`jsonwebtoken@9.0.2`), bcryptjs (`bcryptjs@2.4.3`) |
 | **File Handling & Cloud** | Multer (`multer@1.4.5-lts.1`), Cloudinary SDK (`cloudinary@2.4.0`) |
-| **Mailing & Payments** | Nodemailer (`nodemailer@9.0.5`), Razorpay Node SDK (`razorpay@2.9.4`) |
+| **Mailing & Payments** | Brevo Email HTTP API (`api.brevo.com/v3/smtp/email`), Razorpay Node SDK (`razorpay@2.9.4`) |
 | **Security & Middleware** | Helmet (`helmet@7.1.0`), CORS (`cors@2.8.5`), Cookie Parser (`cookie-parser@1.4.6`) |
 
 ---
@@ -521,11 +521,10 @@ MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/blinkit_db?r
 JWT_SECRET=your_super_secret_jwt_key_here
 JWT_EXPIRE=7d
 
-# Nodemailer Email Configuration (Gmail SMTP)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=586
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_gmail_app_password
+# Brevo Email HTTP API Configuration (for Password Reset OTP)
+BREVO_API_KEY=your_brevo_api_key_here
+BREVO_SENDER_EMAIL=your_verified_sender_email@example.com
+BREVO_SENDER_NAME=BlinkitClone
 
 # Cloudinary Storage Configuration
 CLOUDINARY_CLOUD_NAME=your_cloud_name
