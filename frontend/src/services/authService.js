@@ -16,7 +16,7 @@ export const authService = {
     return response.data;
   },
 
-  // Request password reset OTP code (Nodemailer + Gmail SMTP)
+  // Request password reset OTP code (Brevo HTTP API)
   forgotPassword: async (email) => {
     const response = await API.post('/auth/forgot-password', { email });
     return response.data;

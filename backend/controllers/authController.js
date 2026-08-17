@@ -150,7 +150,7 @@ export const loginUser = async (req, res) => {
 };
 
 /**
- * @desc    Request Password Reset 6-Digit OTP via Email
+ * @desc    Request Password Reset 6-Digit OTP via Email (Brevo HTTP API)
  * @route   POST /api/auth/forgot-password
  * @access  Public
  */
@@ -184,38 +184,35 @@ export const forgotPassword = async (req, res) => {
     const emailContent = `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #0c831f; margin: 0;">⚡ Blinkit Quick Commerce</h2>
+          <h2 style="color: #0c831f; margin: 0;">⚡ BlinkitMart Quick Commerce</h2>
           <p style="color: #666; font-size: 14px; margin-top: 5px;">Password Reset Verification</p>
         </div>
         <p style="color: #333;">Hello <strong>${user.name}</strong>,</p>
-        <p style="color: #555;">You requested a password reset for your Blinkit account. Use the 6-digit OTP code below to update your password:</p>
+        <p style="color: #555;">You requested a password reset for your BlinkitMart account. Use the 6-digit OTP code below to update your password:</p>
         <div style="background-color: #f4fbf5; border: 2px dashed #0c831f; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
           <span style="font-size: 36px; font-weight: bold; letter-spacing: 6px; color: #0c831f;">${otp}</span>
-          <p style="color: #888; font-size: 12px; margin-bottom: 0; margin-top: 10px;">Valid for <strong>5 minutes</strong> • Single use only</p>
+          <p style="color: #888; font-size: 12px; margin-bottom: 0; margin-top: 10px;">Valid for <strong>5 minutes</strong> • Single use only • Do not share this code</p>
         </div>
-        <p style="color: #777; font-size: 13px;">If you did not request a password reset, please ignore this email.</p>
+        <p style="color: #777; font-size: 13px;">If you did not request a password reset, please ignore this email and your password will remain unchanged.</p>
       </div>
     `;
 
-    try {
-      await sendEmail({
-        email: user.email,
-        subject: '🔐 Your Password Reset OTP Code - Blinkit',
-        html: emailContent,
-      });
-    } catch (mailErr) {
-      console.warn(`Forgot password email delivery note: ${mailErr.message}`);
-    }
+    // Send email via Brevo HTTP API
+    await sendEmail({
+      email: user.email,
+      subject: '🔐 BlinkitMart - Password Reset OTP Code',
+      html: emailContent,
+    });
 
     return res.status(200).json({
       success: true,
       message: `A 6-digit password reset OTP has been sent to ${user.email}. Please check your inbox!`,
     });
   } catch (error) {
+    console.error(`Forgot password error for user: ${error.message}`);
     return res.status(500).json({
       success: false,
-      message: 'Error sending password reset OTP',
-      error: error.message,
+      message: 'Unable to send OTP email. Please try again later.',
     });
   }
 };

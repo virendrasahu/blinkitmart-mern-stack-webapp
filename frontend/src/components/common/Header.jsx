@@ -26,7 +26,7 @@ import {
  */
 function Header() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
-  const { location, searchQuery, setSearchQuery, setIsCartOpen, setIsLocationModalOpen } = useApp();
+  const { location, searchQuery, setSearchQuery, setSelectedCategory, setIsCartOpen, setIsLocationModalOpen } = useApp();
   const { cartCount, summary } = useCart();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -49,6 +49,13 @@ function Header() {
     setMobileMenuOpen(false);
   };
 
+  const handleLogoClick = () => {
+    setSelectedCategory('');
+    setSearchQuery('');
+    closeMobileMenu();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-gray-100 shadow-xs font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -59,7 +66,7 @@ function Header() {
           {/* Left: Brand Logo Image & Delivery Location Selector */}
           <div className="flex items-center gap-2 sm:gap-6 shrink-0">
             {/* Brand Logo: WebsiteLogo image on mobile/tablet, text form on desktop */}
-            <Link to="/" className="flex items-center group shrink-0">
+            <Link to="/" onClick={handleLogoClick} className="flex items-center group shrink-0 cursor-pointer">
               {/* Mobile & Tablet Logo Image (Visible < lg) */}
               <img
                 src={websiteLogo}
@@ -106,13 +113,13 @@ function Header() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder='Search "milk", "bread", "chips", "apples"...'
-                className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-xs"
+                className="w-full pl-10 pr-10 py-2.5 bg-gray-100/80 border border-transparent rounded-2xl text-xs font-semibold text-gray-900 placeholder-gray-500 focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={clearSearch}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
                 >
                   <FiX className="h-4 w-4" />
                 </button>
@@ -120,62 +127,56 @@ function Header() {
             </div>
           </form>
 
-          {/* Right Action Controls: Desktop Profile/Cart + Mobile Cart & Hamburger */}
+          {/* Right: Customer Actions */}
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             
-            {/* Desktop User Profile / Auth Dropdown (Visible >= lg screens) */}
-            <div className="hidden lg:block">
+            {/* User Profile / Auth Button */}
+            <div className="relative">
               {isAuthenticated ? (
-                <div className="relative">
+                <div>
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-800 cursor-pointer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
                   >
                     <img
                       src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
                       alt={user?.name}
-                      className="w-7 h-7 rounded-full object-cover border border-primary/20 shrink-0"
+                      className="w-7 h-7 rounded-full object-cover border border-amber-300 shrink-0"
                     />
-                    <span className="max-w-[100px] truncate">{user?.name?.split(' ')[0]}</span>
-                    <FiChevronDown className="w-4 h-4 text-gray-500" />
+                    <span className="hidden md:inline font-bold truncate max-w-[100px]">{user?.name}</span>
+                    <FiChevronDown className="w-3.5 h-3.5 text-gray-500" />
                   </button>
 
                   {/* Desktop Profile Dropdown */}
                   {dropdownOpen && (
-                    <div
-                      className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2"
-                      onMouseLeave={() => setDropdownOpen(false)}
-                    >
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-bold text-gray-900 truncate">{user?.name}</p>
-                        <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                        <span className="inline-block text-[10px] font-bold text-primary bg-primary-light px-2 py-0.5 rounded-full mt-1 uppercase">
-                          {user?.role}
-                        </span>
+                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-xs font-bold text-gray-900 truncate">{user?.name}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{user?.email}</p>
                       </div>
+
+                      <Link
+                        to="/profile"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <FiUser className="w-4 h-4 text-gray-500" /> Account Profile
+                      </Link>
 
                       <Link
                         to="/orders"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        <FiPackage className="w-4 h-4 text-primary" /> My Orders
+                        <FiPackage className="w-4 h-4 text-gray-500" /> My Orders
                       </Link>
 
                       <Link
                         to="/wishlist"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         <FiHeart className="w-4 h-4 text-red-500" /> Wishlist
-                      </Link>
-
-                      <Link
-                        to="/profile"
-                        onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <FiUser className="w-4 h-4 text-primary" /> Profile Settings
                       </Link>
 
                       {isAdmin && (
@@ -238,34 +239,31 @@ function Header() {
             >
               <FiMenu className="w-6 h-6" />
             </button>
-
           </div>
         </div>
 
-        {/* Mobile Sub-Header Search Bar (Visible ONLY on small mobile screens < sm) */}
-        <div className="pb-3 sm:hidden">
-          <form onSubmit={handleSearchSubmit}>
-            <div className="relative w-full">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <FiSearch className="h-4 w-4" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder='Search "milk", "chips", "apples"...'
-                className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-xs"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={clearSearch}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                >
-                  <FiX className="h-4 w-4" />
-                </button>
-              )}
+        {/* Mobile Search Bar Row (Shown on < sm screens) */}
+        <div className="sm:hidden pb-3">
+          <form onSubmit={handleSearchSubmit} className="relative w-full">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <FiSearch className="h-4 w-4" />
             </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder='Search "milk", "chips", "apples"...'
+              className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <FiX className="h-4 w-4" />
+              </button>
+            )}
           </form>
         </div>
 
@@ -285,9 +283,9 @@ function Header() {
             <div>
               {/* Drawer Top Header */}
               <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
-                <div className="flex items-center gap-2">
+                <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2">
                   <img src={websiteLogo} alt="BlinkitMart" className="h-8 w-auto object-contain" />
-                </div>
+                </Link>
                 <button
                   onClick={closeMobileMenu}
                   className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 rounded-xl transition-colors cursor-pointer"
@@ -324,12 +322,12 @@ function Header() {
                 )}
               </div>
 
-              {/* Navigation Menu Links */}
-              <nav className="p-3 space-y-1">
+              {/* Mobile Drawer Navigation Links */}
+              <nav className="p-4 space-y-1">
                 <Link
                   to="/"
-                  onClick={closeMobileMenu}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                  onClick={handleLogoClick}
+                  className="flex items-center gap-3 px-4 py-3 text-xs font-bold text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
                 >
                   <FiHome className="w-4 h-4 text-primary" /> Home
                 </Link>
@@ -337,7 +335,7 @@ function Header() {
                 <Link
                   to="/products"
                   onClick={closeMobileMenu}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 text-xs font-bold text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
                 >
                   <FiGrid className="w-4 h-4 text-primary" /> All Categories & Products
                 </Link>
@@ -345,26 +343,23 @@ function Header() {
                 <Link
                   to="/wishlist"
                   onClick={closeMobileMenu}
-                  className="flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 text-xs font-bold text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <FiHeart className="w-4 h-4 text-red-500" /> Wishlist
-                  </div>
+                  <FiHeart className="w-4 h-4 text-red-500" /> Wishlist
                 </Link>
 
                 <button
-                  type="button"
                   onClick={() => {
                     closeMobileMenu();
                     setIsCartOpen(true);
                   }}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors cursor-pointer text-left"
+                  className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-gray-800 hover:bg-gray-100 rounded-xl transition-colors text-left cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <FiShoppingCart className="w-4 h-4 text-primary" /> My Cart
                   </div>
                   <span className="bg-yellow-400 text-gray-900 text-[10px] font-black px-2 py-0.5 rounded-full">
-                    {cartCount} items
+                    {cartCount}
                   </span>
                 </button>
 
@@ -373,7 +368,7 @@ function Header() {
                     <Link
                       to="/orders"
                       onClick={closeMobileMenu}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 text-xs font-bold text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
                     >
                       <FiPackage className="w-4 h-4 text-primary" /> My Orders
                     </Link>
@@ -381,35 +376,34 @@ function Header() {
                     <Link
                       to="/profile"
                       onClick={closeMobileMenu}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 text-xs font-bold text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
                     >
-                      <FiUser className="w-4 h-4 text-primary" /> Profile Settings
+                      <FiUser className="w-4 h-4 text-primary" /> Account Profile
                     </Link>
-                  </>
-                )}
 
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    onClick={closeMobileMenu}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors"
-                  >
-                    <FiShield className="w-4 h-4 text-amber-600" /> Admin Dashboard
-                  </Link>
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={closeMobileMenu}
+                        className="flex items-center gap-3 px-4 py-3 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100/80 rounded-xl transition-colors"
+                      >
+                        <FiShield className="w-4 h-4 text-amber-600" /> Admin Panel
+                      </Link>
+                    )}
+                  </>
                 )}
               </nav>
             </div>
 
-            {/* Drawer Bottom Actions */}
+            {/* Mobile Drawer Logout Action */}
             {isAuthenticated && (
               <div className="p-4 border-t border-gray-100">
                 <button
-                  type="button"
                   onClick={() => {
                     closeMobileMenu();
                     logout();
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-xl transition-colors cursor-pointer"
                 >
                   <FiLogOut className="w-4 h-4" /> Log Out
                 </button>

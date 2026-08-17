@@ -283,7 +283,15 @@ export async function forgotPasswordController(request,response) {
     try {
         const { email } = request.body 
 
-        const user = await UserModel.findOne({ email })
+        if(!email || !email.includes('@')){
+            return response.status(400).json({
+                message : "Please enter a valid email address",
+                error : true,
+                success : false
+            })
+        }
+
+        const user = await UserModel.findOne({ email: email.trim().toLowerCase() })
 
         if(!user){
             return response.status(400).json({
@@ -294,16 +302,16 @@ export async function forgotPasswordController(request,response) {
         }
 
         const otp = generatedOtp()
-        const expireTime = new Date() + 60 * 60 * 1000 // 1hr
+        const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 min
 
-        const update = await UserModel.findByIdAndUpdate(user._id,{
+        await UserModel.findByIdAndUpdate(user._id,{
             forgot_password_otp : otp,
-            forgot_password_expiry : new Date(expireTime).toISOString()
+            forgot_password_expiry : expireTime
         })
 
         await sendEmail({
-            sendTo : email,
-            subject : "Forgot password from Binkeyit",
+            sendTo : user.email,
+            subject : "🔐 BlinkitMart - Password Reset OTP Code",
             html : forgotPasswordTemplate({
                 name : user.name,
                 otp : otp
@@ -311,14 +319,15 @@ export async function forgotPasswordController(request,response) {
         })
 
         return response.json({
-            message : "check your email",
+            message : "OTP sent successfully",
             error : false,
             success : true
         })
 
     } catch (error) {
+        console.error(`❌ Brevo password reset email error: ${error.message}`);
         return response.status(500).json({
-            message : error.message || error,
+            message : "Unable to send OTP email. Please try again later.",
             error : true,
             success : false
         })

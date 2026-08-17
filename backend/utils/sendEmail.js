@@ -1,59 +1,99 @@
-import nodemailer from 'nodemailer';
+import https from 'https';
 
 /**
- * Send Email Utility using Nodemailer & Gmail SMTP (sendEmail.js)
+ * Send Email Utility using Brevo Transactional Email HTTP API (sendEmail.js)
  * 
  * What it does:
- * - Sends 6-digit HTML verification OTP emails using Gmail SMTP.
- * - Reads EMAIL_USER and EMAIL_PASS securely from environment variables (.env).
- * - Never exposes email credentials in frontend or source code.
- * - If EMAIL_USER / EMAIL_PASS are missing in local dev, prints formatted console logs to prevent crashes.
+ * - Sends 6-digit HTML verification OTP emails using Brevo REST HTTP API (https://api.brevo.com/v3/smtp/email).
+ * - Reads BREVO_API_KEY, BREVO_SENDER_EMAIL, and BREVO_SENDER_NAME securely from environment variables.
+ * - Uses Node.js native https module with family: 4 to prevent dual-stack IPv6 DNS resolution timeouts.
+ * - Never exposes API credentials in frontend or source code.
+ * - Returns success ONLY after Brevo HTTP API confirms acceptance of email request.
+ * - Throws an error if Brevo API request fails so caller can return appropriate HTTP error response.
  */
 export const sendEmail = async (options) => {
-  const emailUser = process.env.EMAIL_USER;
-  const emailPass = process.env.EMAIL_PASS;
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'Virendra2609.vs@gmail.com';
+  const senderName = process.env.BREVO_SENDER_NAME || 'BlinkitClone';
 
-  // Development Fallback: If credentials not set, log formatted console OTP
-  if (!emailUser || !emailPass) {
-    console.log(`=================================`);
-    console.log(`✉️ SIMULATED GMAIL OTP EMAIL (Configure EMAIL_USER & EMAIL_PASS in backend/.env for live delivery)`);
-    console.log(`📩 Destination Email: ${options.email}`);
-    console.log(`📌 Subject:           ${options.subject}`);
-    console.log(`⏱️ OTP Expiry:        5 Minutes`);
-    console.log(`=================================`);
-    return { messageId: 'simulated-dev-id' };
+  const recipientEmail = options.email || options.sendTo;
+  const subject = options.subject || 'BlinkitMart - Password Reset OTP';
+  const htmlContent = options.html || options.htmlContent;
+
+  if (!recipientEmail) {
+    console.error('❌ Brevo password reset email error: Recipient email address is missing!');
+    throw new Error('Recipient email address is required');
   }
 
-  // Create reusable Nodemailer transporter object using Gmail SMTP
-  const transporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail',
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: Number(process.env.EMAIL_PORT || 587),
-    secure: false, // true for 465, false for other ports
-    auth: {
-      user: emailUser,
-      pass: emailPass,
+  if (!apiKey) {
+    console.error('❌ Brevo password reset email error: BREVO_API_KEY is missing in backend environment variables!');
+    throw new Error('Email service configuration missing');
+  }
+
+  const payload = JSON.stringify({
+    sender: {
+      name: senderName,
+      email: senderEmail,
     },
-    tls: {
-      rejectUnauthorized: false,
-    },
+    to: [
+      {
+        email: recipientEmail,
+      },
+    ],
+    subject: subject,
+    htmlContent: htmlContent,
   });
 
-  const mailOptions = {
-    from: process.env.EMAIL_FROM || `"Blinkit Support" <${emailUser}>`,
-    to: options.email,
-    subject: options.subject,
-    html: options.html,
-  };
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': apiKey,
+          'Content-Length': Buffer.byteLength(payload),
+        },
+        family: 4, // Force IPv4 to prevent IPv6 DNS resolution timeouts on Node/Render
+        timeout: 12000,
+      },
+      (res) => {
+        let body = '';
+        res.on('data', (chunk) => (body += chunk));
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(body);
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              const messageId = parsed.messageId || 'accepted';
+              console.log(`✅ Password reset OTP email accepted by Brevo`);
+              resolve({ messageId, success: true });
+            } else {
+              const errorMsg = parsed.message || parsed.code || `HTTP ${res.statusCode}`;
+              console.error(`❌ Brevo password reset email error: ${errorMsg}`);
+              reject(new Error(`Brevo API Error: ${errorMsg}`));
+            }
+          } catch (e) {
+            console.error(`❌ Brevo password reset email error: ${body}`);
+            reject(new Error('Invalid response from Brevo email API'));
+          }
+        });
+      }
+    );
 
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✉️ Real Email Sent to ${options.email}: Message ID ${info.messageId}`);
-    return info;
-  } catch (error) {
-    console.error(`❌ Nodemailer Email Error: ${error.message}`);
-    throw error;
-  }
+    req.on('error', (err) => {
+      console.error(`❌ Brevo password reset email error: ${err.message}`);
+      reject(err);
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      console.error('❌ Brevo password reset email error: Request timed out');
+      reject(new Error('Brevo API request timed out'));
+    });
+
+    req.write(payload);
+    req.end();
+  });
 };
 
 export default sendEmail;

@@ -35,9 +35,15 @@ app.use(helmet({
   crossOriginResourcePolicy: false,
 }));
 
-// CORS Configuration
+// CORS Configuration - Supports Vercel Production & Local Development
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || origin.endsWith('.vercel.app') || origin === process.env.FRONTEND_URL || origin.includes('localhost')) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
   credentials: true,
 }));
 

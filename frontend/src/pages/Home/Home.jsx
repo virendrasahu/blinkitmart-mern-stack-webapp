@@ -7,6 +7,7 @@ import CategoryGrid from './CategoryGrid.jsx';
 import ProductSection from './ProductSection.jsx';
 import ProductDetailsModal from '../../components/product/ProductDetailsModal.jsx';
 import productService from '../../services/productService.js';
+import { useApp } from '../../context/AppContext.jsx';
 
 /**
  * Home Page Component
@@ -15,7 +16,7 @@ function Home() {
   const [categories, setCategories] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
-  const [activeCategory, setActiveCategory] = useState('');
+  const { selectedCategory, setSelectedCategory } = useApp();
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -27,7 +28,7 @@ function Home() {
         const [catRes, featuredRes, productsRes] = await Promise.all([
           productService.getCategories(),
           productService.getFeaturedProducts(),
-          productService.getProducts({ category: activeCategory, limit: 12 }),
+          productService.getProducts({ category: selectedCategory, limit: 12 }),
         ]);
 
         if (catRes.success) setCategories(catRes.data);
@@ -41,7 +42,7 @@ function Home() {
     };
 
     fetchData();
-  }, [activeCategory]);
+  }, [selectedCategory]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
@@ -54,18 +55,18 @@ function Home() {
         {/* Horizontal Category Scroll Bar */}
         <CategoryBar
           categories={categories}
-          activeCategory={activeCategory}
-          onSelectCategory={(slug) => setActiveCategory(slug)}
+          activeCategory={selectedCategory}
+          onSelectCategory={(slug) => setSelectedCategory(slug)}
         />
 
         {/* Hero Banner Sliders (Shown when no category filter is active) */}
-        {!activeCategory && <HeroBanner />}
+        {!selectedCategory && <HeroBanner />}
 
         {/* Shop by Category Visual Department Grid */}
-        {!activeCategory && <CategoryGrid categories={categories} />}
+        {!selectedCategory && <CategoryGrid categories={categories} />}
 
         {/* Featured Hot Deals Section (Limited to 6 items with "See All") */}
-        {!activeCategory && (
+        {!selectedCategory && (
           <ProductSection
             title="⚡ Trending & Featured Items"
             subtitle="Most ordered grocery items delivered in 10 minutes"
@@ -79,12 +80,12 @@ function Home() {
 
         {/* Main Product Catalog Section (Limited to 12 items with "See All") */}
         <ProductSection
-          title={activeCategory ? `Department Items` : '🛒 Popular Groceries & Essentials'}
+          title={selectedCategory ? `Department Items` : '🛒 Popular Groceries & Essentials'}
           subtitle="Quality inspected fresh items"
           products={allProducts}
           loading={loading}
           limit={12}
-          seeAllLink={activeCategory ? `/products?category=${activeCategory}` : '/products'}
+          seeAllLink={selectedCategory ? `/products?category=${selectedCategory}` : '/products'}
           onOpenModal={(prod) => setSelectedProduct(prod)}
         />
 

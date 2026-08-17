@@ -63,7 +63,7 @@ Developed as a comprehensive educational and hiring portfolio project demonstrat
   - 1-Click Hiring Demo Accounts autofill buttons (`Customer Demo` & `Admin Demo`).
 
 - **5-Minute Email OTP Password Reset**:
-  - Request 6-digit reset OTP delivered to registered Gmail via Nodemailer SMTP.
+  - Request 6-digit reset OTP delivered to registered Gmail via Brevo Transactional Email REST HTTP API.
   - Expiration timer (5 minutes) and 60-second resend cooldown timer.
 
 - **Profile & Cloudinary Avatar Upload**:
@@ -170,7 +170,7 @@ Developed as a comprehensive educational and hiring portfolio project demonstrat
          │
          ├──► MongoDB Atlas (Users, Products, Categories, Orders, Cart, Address)
          ├──► Cloudinary CDN (Profile Avatars, Product Images)
-         ├──► Nodemailer Gmail SMTP (5-Min Reset OTP Emails)
+         ├──► Brevo REST HTTP API (5-Min Reset OTP Emails)
          └──► Razorpay Gateway API (Payment Orders & Signature Verification)
 ```
 
@@ -225,7 +225,7 @@ BlinkIt-Clone-Full-Stack-Ecommerce-main/
 │   │   ├── calculatePrice.js       # Cart Subtotal & Bill Breakdown Utility
 │   │   ├── generateOrderId.js      # Unique Human-Readable Order ID Generator
 │   │   ├── generateToken.js        # JWT Token Signer
-│   │   ├── sendEmail.js            # Nodemailer Transporter Utility
+│   │   ├── sendEmail.js            # Brevo Transactional Email REST HTTP API Utility
 │   │   └── uploadImageClodinary.js # Cloudinary Upload Stream Helper
 │   ├── .env                        # Environment Configuration (Git-Ignored)
 │   ├── .env.example                # Template Environment File
